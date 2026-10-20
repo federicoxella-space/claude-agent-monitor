@@ -1,0 +1,6 @@
+{
+  "name": "agent-monitor",
+  "owner": { "name": "federicoxella-space" },
+  "description": "Mod di Claude Code: pannello live degli agenti della sessione",
+  "plugins": [{ "name": "agent-monitor", "source": "./" }]
+}

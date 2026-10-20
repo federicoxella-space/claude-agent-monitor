@@ -1,0 +1,9 @@
+{
+  "name": "agent-monitor",
+  "version": "0.1.0",
+  "description": "Pannello live degli agenti della sessione: modello, effort, attività, durata, token e costo stimato",
+  "types": "./types/index.d.ts",
+  "author": {
+    "name": "federicoxella-space"
+  }
+}
