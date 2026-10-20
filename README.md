@@ -2,7 +2,7 @@
 
 Mod di Claude Code che mostra in un pannello live gli agenti (subagenti) della sessione: modello, effort, attività, durata, token e costo stimato.
 
-![Pannello agent-monitor con quattro agenti: fable, haiku, sonnet e opus](docs/pannello.png)
+![Pannello agent-monitor con quattro agenti attivi: haiku, opus, sonnet e fable con effort diversi](docs/pannello.png)
 
 ## Cosa mostra
 
