@@ -254,7 +254,7 @@ export const register: Register = on => {
           <Button key="filter-live" label="Attivi" variant={everyone ? 'secondary' : 'primary'} onPress={() => update($, showAll, () => false)} />
           <Button key="filter-all" label="Tutti" variant={everyone ? 'primary' : 'secondary'} onPress={() => update($, showAll, () => true)} />
           {/* toglie dallo stato tutte le righe concluse, anche quelle di prima di un /clear */}
-          <Button key="clear-done" label="Pulisci conclusi" onPress={async () => {
+          <Button key="clear-done" label="🗑" onPress={async () => {
             await update($, agents, cur => Object.fromEntries(Object.entries(cur).filter(([, a]) => isLive(a))))
             await update($, expanded, id => (id !== null && all.some(a => a.id === id && !isLive(a)) ? null : id))
           }} />
