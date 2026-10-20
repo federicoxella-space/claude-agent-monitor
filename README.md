@@ -1,71 +1,80 @@
 # agent-monitor
 
-Mod di Claude Code che mostra in un pannello live gli agenti (subagenti) della sessione: modello, effort, attività, durata, token e costo stimato.
+**English** · [Italiano](README.it.md)
 
-![Pannello agent-monitor con quattro agenti attivi: haiku, opus, sonnet e fable con effort diversi](docs/pannello.png)
+A Claude Code mod that shows the session's agents (subagents) in a live pane: model, effort, activity, duration, tokens and estimated cost.
 
-## Cosa mostra
+![agent-monitor pane with four active agents: haiku, opus, sonnet and fable at different effort levels](docs/pannello.png)
 
-**Totali in alto**
+## What it shows
 
-| Riquadro | Significato |
+**Totals at the top**
+
+| Box | Meaning |
 |---|---|
-| Attivi | Agenti in esecuzione / agenti totali |
-| Token | Token di tutti gli agenti |
-| Costo agenti | Somma delle stime dei singoli agenti |
-| Sessione | Costo reale dell'intera sessione (come `/cost`), conversazione principale compresa: per questo non è confrontabile con "Costo agenti" |
+| Active | Running agents / total agents |
+| Tokens | Tokens across all agents |
+| Agents cost | Sum of each agent's estimate |
+| Session | Actual cost of the whole session (as in `/cost`), main conversation included, so it is not comparable with "Agents cost" |
 
-**Scheda di ogni agente attivo**
+**Card for each running agent**
 
-- Descrizione del compito, tipo di agente e `modello - effort`, nel colore della famiglia (viola opus, verde acqua sonnet, corallo haiku, ambra fable).
-- Attività: il primo tool chiesto nell'ultimo step (`Edit src/parser.ts`), "Sta ragionando…" mentre il modello elabora, "Scrive la risposta" quando lo step non chiama tool.
-- Durata dal primo avvio dell'agente: per un agente ripreso include anche le pause.
-- Due barre con gli stessi quattro segmenti (input, output, cache read, cache write):
-  - **token**: quanto contesto muove l'agente;
-  - **costo**: dove vanno davvero i soldi (la cache read pesa molto nei token e poco nel costo).
+- Task description, agent type and `model - effort`, in the model family's colour (purple opus, teal sonnet, coral haiku, amber fable).
+- Activity: the first tool requested in the latest step (`Edit src/parser.ts`), "Thinking…" while the model works, "Writing the answer" when the step calls no tools.
+- Duration since the agent first started: for a resumed agent it includes the pauses.
+- Two bars with the same four segments (input, output, cache read, cache write):
+  - **tokens**: how much context the agent moves;
+  - **cost**: where the money actually goes (cache reads weigh a lot in tokens and little in cost).
 
-  Sul desktop sono barre SVG continue; sul terminale usano blocchi a ottavi di cella.
-- "▸ dettagli" apre i quattro contatori in cifre e gli ultimi 5 tool chiamati.
+  On desktop they are continuous SVG bars; in the terminal they use eighth-of-a-cell blocks.
+- "▸ details" shows the four counters as numbers and the last 5 tools called.
 
-**Agenti conclusi**: una riga compatta con ✓, oppure ✗ con l'esito (Interrotto, Errore API, Rifiutato); "▸" la riapre.
+**Finished agents**: one compact row with ✓, or ✗ with the outcome (Interrupted, API error, Refused); "▸" expands it again.
 
-**Pulsanti**
+**Buttons**
 
-- **Attivi**: agenti in corso più gli ultimi 3 conclusi. **Tutti**: l'intera sessione.
-- **🗑 (pulisci conclusi)**: toglie tutti gli agenti terminati, compresi quelli falliti o di prima di un `/clear`.
+- **Active**: running agents plus the last 3 finished ones. **All**: the whole session.
+- **🗑 (clear finished)**: removes every finished agent, including failed ones and those from before a `/clear`.
 
-**Status line**: `⚙ 3 agenti · $0.84` finché c'è almeno un agente attivo; il costo somma tutti gli agenti della sessione, conclusi compresi.
+**Status line**: `⚙ 3 agents · $0.84` while at least one agent is running; the cost adds up every agent in the session, finished ones included.
 
-Sono elencati solo gli agenti avviati dal tool Agent dopo l'inizio della sessione (o dopo l'ultimo `/clear`); i fork interni del motore restano nascosti.
+Only agents started by the Agent tool after the session began (or after the latest `/clear`) are listed; the engine's internal forks stay hidden.
 
-## Comando
+## Command
 
-`/agent-monitor` apre il pannello. Il pannello si apre anche da solo a ogni nuovo agente, quindi si riapre anche se lo avevi chiuso.
+`/agent-monitor` opens the pane. The pane also opens by itself whenever a new agent starts, so it comes back even if you closed it.
 
-## Installazione
+## Language
 
-Al prompt di una sessione da terminale:
+The pane is available in English and Italian. The mod's `language` option (plugin configuration menu) can be:
+
+- `auto` (default): follows Claude Code's `language` setting in `settings.json` (e.g. `"language": "italian"`), then the `LC_ALL` / `LANG` variables; if none of them names a supported language, English is used;
+- `it` or `en`: forces the language.
+
+## Installation
+
+At the prompt of a terminal session:
 
 ```
 /plugin install agent-monitor --marketplace federicoxella-space/claude-agent-monitor
 ```
 
-Da shell:
+From a shell:
 
 ```bash
 claude plugin install agent-monitor --marketplace federicoxella-space/claude-agent-monitor
 ```
 
-Nell'app desktop: + accanto al prompt → Plugins → Add marketplace con `federicoxella-space/claude-agent-monitor` → Add plugin.
+In the desktop app: + next to the prompt box → Plugins → Add marketplace with `federicoxella-space/claude-agent-monitor` → Add plugin.
 
-I moduli di hook dei plugin installati sono in early access: se la mod non parte, aggiungi a `~/.claude/settings.json`
+Hooks modules of installed plugins are in early access: if the mod does not start, add this to `~/.claude/settings.json`
 
 ```json
 { "env": { "CLAUDE_CODE_ENABLE_FUNCTION_HOOKS": "1" } }
 ```
 
-## Note sui costi
+## Cost notes
 
-- Stima a prezzo di listino, da una tabella fissa in `hooks/cost.ts` da aggiornare a mano per i nuovi modelli. Sconti e prezzi aziendali non sono inclusi.
-- La cache write è calcolata a 1,25× l'input (TTL 5 min); con TTL 1 h il costo reale è 2×.
-- Un agente con un modello che non è in tabella mostra "prezzo del modello sconosciuto" nella barra del costo ed è escluso dai totali: il totale prende un `*` e in fondo al pannello compare quanti agenti sono esclusi.
+- List-price estimate, from a fixed table in `hooks/cost.ts` that has to be updated by hand for new models. Discounts and enterprise pricing are not included.
+- Cache writes are priced at 1.25× input (5 min TTL); with a 1 h TTL the actual cost is 2×.
+- An agent whose model is not in the table shows "unknown model price" in its cost bar and is left out of the totals: the total gets a `*` and the footer says how many agents were excluded.

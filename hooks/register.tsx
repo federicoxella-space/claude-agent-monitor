@@ -6,9 +6,11 @@ import {
   costOf, costParts, describeTool, effortLabel, eighthsBar, family, fmtCost, fmtDuration, fmtTokens,
   shortModel, sumCost, svgBar, totalTokens, zeroUsage,
 } from './cost'
+import { activityText, resolveLang, STRINGS } from './i18n'
 
 const PANE = 'agent-monitor'
-const TITLE = 'Agenti'
+// Lingua scelta a session.start (che rigira a ogni reload); inglese finché non è risolta
+let t = STRINGS.en
 const agents = atom({ plugin: 'agent-monitor', key: 'agents' } as const, {})
 const expanded = atom({ plugin: 'agent-monitor', key: 'expanded' } as const, null)
 const showAll = atom({ plugin: 'agent-monitor', key: 'showAll' } as const, false)
@@ -35,7 +37,7 @@ const costText = (c: { usd: number; unpriced: number }) => fmtCost(c.usd) + (c.u
 
 const newRow = (id: string, now: number): AgentRow => ({
   id, description: '', type: '', startedAt: now, status: 'running',
-  activity: 'In avvio…', recent: [], steps: 0, usage: zeroUsage(),
+  activity: '@starting', recent: [], steps: 0, usage: zeroUsage(),
 })
 
 // Crea la riga se un evento dell'agente arriva prima di agent.spawn
@@ -50,12 +52,16 @@ const upsert = async ($: $, id: string, fn: (a: AgentRow) => AgentRow) => {
 const refreshStatus = async ($: $) => {
   const rows = visible(await read($, agents), (await $.session.usage()).startedAt)
   const live = rows.filter(isLive).length
-  $.ui.status(live ? `⚙ ${live} ${live === 1 ? 'agente' : 'agenti'} · ${costText(sumCost(rows))}` : undefined)
+  $.ui.status(live ? t.status(live, costText(sumCost(rows))) : undefined)
   return live
 }
 
-export const register: Register = on => {
+export const register: Register = (on, options) => {
   on('session.start', async ($, e, next) => {
+    const settings = await $.settings.read()
+    const lang = resolveLang(options.language, settings.language, await $.env.get('LC_ALL'), await $.env.get('LANG'))
+    t = STRINGS[lang]
+    $.ui.log(`lingua ${lang} (opzione ${String(options.language)}, language ${String(settings.language)})`, { to: 'debug' })
     // Ogni secondo: status line sempre allineata; ridisegno del pannello (timer) solo mentre qualche agente lavora
     $.clock.every(1000, () => {
       void refreshStatus($).then(live => {
@@ -63,13 +69,13 @@ export const register: Register = on => {
       })
     })
     // /agents è già un comando della CLI da terminale
-    await $.command.register({ name: 'agent-monitor', description: 'Mostra gli agenti della sessione con modello, token e costo' })
+    await $.command.register({ name: 'agent-monitor', description: t.commandDescription })
     return next(e)
   })
 
   on('command.run', { command: 'agent-monitor' }, async $ => {
-    await $.ui.open({ id: PANE, title: TITLE })
-    return { text: 'Pannello agenti aperto.' }
+    await $.ui.open({ id: PANE, title: t.title })
+    return { text: t.commandOpened }
   })
 
   on('agent.spawn', async ($, e, next) => {
@@ -78,9 +84,9 @@ export const register: Register = on => {
       // Anche per un agente ripreso (resume, teammate risvegliato): torna attivo; la durata resta contata dal primo avvio (startedAt)
       await upsert($, r.agentId, a => ({
         ...a, description: e.description, type: e.subagentType, model: a.model ?? r.model,
-        status: 'running', endedAt: undefined, activity: 'In avvio…',
+        status: 'running', endedAt: undefined, activity: '@starting',
       }))
-      void $.ui.open({ id: PANE, title: TITLE })
+      void $.ui.open({ id: PANE, title: t.title })
     }
     return r
   })
@@ -91,7 +97,7 @@ export const register: Register = on => {
 
     await upsert($, id, a => ({
       ...a, model: e.model, effort: e.effort === undefined ? a.effort : String(e.effort),
-      status: 'thinking', activity: 'Sta ragionando…', endedAt: undefined,
+      status: 'thinking', activity: '@thinking', endedAt: undefined,
     }))
     const r = yield* next(e)
     const now = await $.clock.now()
@@ -103,7 +109,7 @@ export const register: Register = on => {
         model: u?.model ?? a.model,
         steps: a.steps + 1,
         status: a.status === 'thinking' ? 'running' : a.status,
-        activity: tools[0] ?? (r.answer ? 'Scrive la risposta' : a.activity),
+        activity: tools[0] ?? (r.answer ? '@writing' : a.activity),
         recent: [...tools.map(text => ({ at: now, text })), ...a.recent].slice(0, 5),
         usage: u ? {
           input: a.usage.input + u.input_tokens,
@@ -121,7 +127,7 @@ export const register: Register = on => {
     const id = e.agentId
     if (id !== undefined) {
       const now = await $.clock.now()
-      const outcome = { answer: 'Concluso', aborted: 'Interrotto', error: 'Errore API', refusal: 'Rifiutato' }[e.reason]
+      const outcome = `@done.${e.reason}`
       await upsert($, id, a => ({
         ...a, endedAt: now, status: e.reason === 'answer' ? 'done' : 'failed', activity: outcome,
       }))
@@ -180,9 +186,9 @@ export const register: Register = on => {
       const pct = (x: number, xs: number[]) => `${Math.round((x / Math.max(1e-12, xs.reduce((s, y) => s + y, 0))) * 100)}%`
       return (
         <Box flexDirection="column">
-          {bar('token', tok, colors, tok.map((n, i) => `${PARTS[i]} ${fmtTokens(n)} (${pct(n, tok)})`), 'nessun token ancora')}
-          {bar('costo', usd, colors, (usd ?? []).map((c, i) => `${PARTS[i]} ${fmtCost(c)} (${pct(c, usd!)})`),
-            usd ? 'nessun costo ancora' : 'prezzo del modello sconosciuto')}
+          {bar(t.barTokens, tok, colors, tok.map((n, i) => `${PARTS[i]} ${fmtTokens(n)} (${pct(n, tok)})`), t.noTokens)}
+          {bar(t.barCost, usd, colors, (usd ?? []).map((c, i) => `${PARTS[i]} ${fmtCost(c)} (${pct(c, usd!)})`),
+            usd ? t.noCost : t.unknownPrice)}
         </Box>
       )
     }
@@ -219,15 +225,15 @@ export const register: Register = on => {
           </Box>
           <Box flexDirection="row" gap={1}>
             <Text color={a.status === 'thinking' ? 'warning' : 'suggestion'}>{a.status === 'thinking' ? '◌' : '↳'}</Text>
-            <Text mono size="footnote" dimColor={a.status === 'thinking'}>{a.activity}</Text>
+            <Text mono size="footnote" dimColor={a.status === 'thinking'}>{activityText(t, a.activity)}</Text>
             <Box flexGrow={1} />
             <Text dimColor tabular>⏱ {elapsed}</Text>
           </Box>
           {bars(a, pal)}
           <Box flexDirection="row" gap={1}>
-            <Button key={`toggle-${a.id}`} plain label={isOpen ? '▾ meno' : '▸ dettagli'}
+            <Button key={`toggle-${a.id}`} plain label={isOpen ? t.less : t.details}
               onPress={() => update($, expanded, cur => (cur === a.id ? null : a.id))} />
-            <Text dimColor size="footnote">{fmtTokens(totalTokens(a.usage))} token · {a.steps} step</Text>
+            <Text dimColor size="footnote">{t.footnote(fmtTokens(totalTokens(a.usage)), a.steps)}</Text>
             <Box flexGrow={1} />
             <Text bold>{cost}</Text>
           </Box>
@@ -236,7 +242,7 @@ export const register: Register = on => {
               <Text size="footnote">
                 <Text color={pal[2]}>█</Text> input {fmtTokens(a.usage.input)}   <Text color={pal[3]}>█</Text> output {fmtTokens(a.usage.output)}   <Text color={pal[4]}>█</Text> cache read {fmtTokens(a.usage.cacheRead)}   <Text color={pal[5]}>█</Text> cache write {fmtTokens(a.usage.cacheWrite)}
               </Text>
-              {a.recent.length === 0 && <Text dimColor size="footnote">Nessun tool chiamato.</Text>}
+              {a.recent.length === 0 && <Text dimColor size="footnote">{t.noTools}</Text>}
               {a.recent.map(r => (
                 <Text mono size="footnote"><Text dimColor>{fmtDuration(r.at - a.startedAt)}</Text> {r.text}</Text>
               ))}
@@ -249,10 +255,10 @@ export const register: Register = on => {
     return (
       <Box flexDirection="column">
         <Box flexDirection="row" gap={1}>
-          <Text bold size="heading">Agenti della sessione</Text>
+          <Text bold size="heading">{t.heading}</Text>
           <Box flexGrow={1} />
-          <Button key="filter-live" label="Attivi" variant={everyone ? 'secondary' : 'primary'} onPress={() => update($, showAll, () => false)} />
-          <Button key="filter-all" label="Tutti" variant={everyone ? 'primary' : 'secondary'} onPress={() => update($, showAll, () => true)} />
+          <Button key="filter-live" label={t.filterLive} variant={everyone ? 'secondary' : 'primary'} onPress={() => update($, showAll, () => false)} />
+          <Button key="filter-all" label={t.filterAll} variant={everyone ? 'primary' : 'secondary'} onPress={() => update($, showAll, () => true)} />
           {/* toglie dallo stato tutte le righe concluse, anche quelle di prima di un /clear */}
           <Button key="clear-done" label="🗑" onPress={async () => {
             await update($, agents, cur => Object.fromEntries(Object.entries(cur).filter(([, a]) => isLive(a))))
@@ -260,17 +266,17 @@ export const register: Register = on => {
           }} />
         </Box>
         <Box flexDirection="row" gap={1} marginTop={1}>
-          {metric('Attivi', String(live.length), `/ ${all.length}`)}
-          {metric('Token', fmtTokens(tokens))}
-          {metric('Costo agenti', costText(agentsCost))}
-          {metric('Sessione', fmtCost(session.cost?.usd))}
+          {metric(t.metricLive, String(live.length), `/ ${all.length}`)}
+          {metric(t.metricTokens, fmtTokens(tokens))}
+          {metric(t.metricAgentsCost, costText(agentsCost))}
+          {metric(t.metricSession, fmtCost(session.cost?.usd))}
         </Box>
         {rows.length === 0 && (
-          <Box marginTop={1}><Text dimColor>Nessun agente avviato in questa sessione.</Text></Box>
+          <Box marginTop={1}><Text dimColor>{t.empty}</Text></Box>
         )}
         {rows.map(card)}
         <Box marginTop={1}>
-          <Text dimColor size="caption">Stima a listino · cache write a 1,25× (con TTL 1 h costa 2×){agentsCost.unpriced ? ` · * ${agentsCost.unpriced} senza prezzo, esclusi` : ""}</Text>
+          <Text dimColor size="caption">{t.note}{agentsCost.unpriced ? t.unpriced(agentsCost.unpriced) : ''}</Text>
         </Box>
       </Box>
     )

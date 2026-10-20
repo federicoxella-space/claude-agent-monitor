@@ -1,9 +1,22 @@
 {
   "name": "agent-monitor",
   "version": "0.1.0",
-  "description": "Pannello live degli agenti della sessione: modello, effort, attività, durata, token e costo stimato",
+  "description": "Live pane for the session agents: model, effort, activity, duration, tokens and estimated cost",
   "types": "./types/index.d.ts",
   "author": {
     "name": "federicoxella-space"
+  },
+  "userConfig": {
+    "language": {
+      "type": "string",
+      "title": "Language",
+      "description": "Pane language: auto follows the Claude Code language setting, then LANG; English otherwise",
+      "default": "auto",
+      "options": [
+        "auto",
+        "it",
+        "en"
+      ]
+    }
   }
 }

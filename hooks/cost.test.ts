@@ -1,6 +1,7 @@
 import { expect, test } from 'claude-code/testing'
 
 import { costOf, costParts, eighthsBar, svgBar, describeTool, effortLabel, fmtDuration, shortModel, sumCost } from './cost'
+import { activityText, resolveLang, STRINGS } from './i18n'
 
 const r = (x: number | undefined) => (x === undefined ? x : Math.round(x * 1e6) / 1e6)
 const u = { input: 1_000_000, output: 1_000_000, cacheRead: 1_000_000, cacheWrite: 1_000_000 }
@@ -65,4 +66,24 @@ test('modelli Bedrock, alias mythos e modelli senza prezzo', () => {
   expect(effortLabel('32000')).toBe('budget 32k')
   expect(effortLabel('high')).toBe('high')
   expect(effortLabel(undefined)).toBe('—')
+})
+
+test('lingua: opzione, poi language di Claude Code, poi LANG, inglese predefinito', () => {
+  expect(resolveLang('it', 'english', 'en_US.UTF-8')).toBe('it')
+  expect(resolveLang('auto', 'italian', 'en_US.UTF-8')).toBe('it')
+  expect(resolveLang('auto', 'Italiano', undefined)).toBe('it')
+  expect(resolveLang('auto', undefined, undefined, 'it_IT.UTF-8')).toBe('it')
+  expect(resolveLang('auto', 'japanese', 'C.UTF-8')).toBe('en')
+  expect(resolveLang(undefined, undefined, undefined, undefined)).toBe('en')
+  expect(resolveLang('auto', 'en-GB', 'it_IT')).toBe('en')
+})
+
+test('traduzioni: stesse chiavi in ogni lingua e attività tradotte al disegno', () => {
+  const keys = (o: object) => Object.keys(o).sort().join(',')
+  expect(keys(STRINGS.it)).toBe(keys(STRINGS.en))
+  expect(activityText(STRINGS.it, '@done.error')).toBe('Errore API')
+  expect(activityText(STRINGS.en, '@thinking')).toBe('Thinking…')
+  expect(activityText(STRINGS.en, 'Edit src/a.ts')).toBe('Edit src/a.ts')
+  expect(STRINGS.en.status(1, '$0.10')).toBe('⚙ 1 agent · $0.10')
+  expect(STRINGS.it.footnote('42k', 3)).toBe('42k token · 3 step')
 })
