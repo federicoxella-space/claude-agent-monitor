@@ -75,7 +75,7 @@ export const register: Register = on => {
   on('agent.spawn', async ($, e, next) => {
     const r = await next(e)
     if (r.deny === undefined && r.agentId) {
-      // Anche per un agente ripreso (resume, teammate risvegliato): torna attivo, il timer riparte
+      // Anche per un agente ripreso (resume, teammate risvegliato): torna attivo; la durata resta contata dal primo avvio (startedAt)
       await upsert($, r.agentId, a => ({
         ...a, description: e.description, type: e.subagentType, model: a.model ?? r.model,
         status: 'running', endedAt: undefined, activity: 'In avvio…',
