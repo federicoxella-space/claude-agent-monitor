@@ -33,7 +33,7 @@ Mod di Claude Code che mostra in un pannello live gli agenti (subagenti) della s
 
 **Pulsanti**
 
-- **Attivi**: agenti in corso più gli ultimi 3 conclusi. **Tutti**: l'intera sessione.
+- **Attivi**: solo gli agenti in esecuzione (quelli conclusi spariscono appena finiscono). **Tutti**: l'intera sessione, agenti conclusi compresi.
 - **🗑 (pulisci conclusi)**: toglie tutti gli agenti terminati, compresi quelli falliti o di prima di un `/clear`.
 
 **Status line**: `⚙ 3 agenti · $0.84` finché c'è almeno un agente attivo; il costo somma tutti gli agenti della sessione, conclusi compresi.

@@ -33,7 +33,7 @@ A Claude Code mod that shows the session's agents (subagents) in a live pane: mo
 
 **Buttons**
 
-- **Active**: running agents plus the last 3 finished ones. **All**: the whole session.
+- **Active**: running agents only (finished ones disappear as they end). **All**: the whole session, finished agents included.
 - **🗑 (clear finished)**: removes every finished agent, including failed ones and those from before a `/clear`.
 
 **Status line**: `⚙ 3 agents · $0.84` while at least one agent is running; the cost adds up every agent in the session, finished ones included.

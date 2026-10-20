@@ -150,7 +150,7 @@ export const register: Register = (on, options) => {
     const barWidth = Math.max(10, cols - 6)
 
     const live = all.filter(isLive)
-    const rows = everyone ? all : [...live, ...all.filter(a => !isLive(a)).slice(0, 3)]
+    const rows = everyone ? all : live
     const agentsCost = sumCost(all)
     const tokens = all.reduce((s, a) => s + totalTokens(a.usage), 0)
 
@@ -272,7 +272,7 @@ export const register: Register = (on, options) => {
           {metric(t.metricSession, fmtCost(session.cost?.usd))}
         </Box>
         {rows.length === 0 && (
-          <Box marginTop={1}><Text dimColor>{t.empty}</Text></Box>
+          <Box marginTop={1}><Text dimColor>{everyone || all.length === 0 ? t.empty : t.noneLive}</Text></Box>
         )}
         {rows.map(card)}
         <Box marginTop={1}>
