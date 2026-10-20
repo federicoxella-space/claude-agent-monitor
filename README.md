@@ -24,7 +24,7 @@ Mod di Claude Code che mostra in un pannello live gli agenti (subagenti) della s
   - **token**: quanto contesto muove l'agente;
   - **costo**: dove vanno davvero i soldi (la cache read pesa molto nei token e poco nel costo).
 
-  Sul desktop passando il mouse su un segmento compare un tooltip; sul terminale le barre usano blocchi a ottavi di cella.
+  Sul desktop sono barre SVG continue; sul terminale usano blocchi a ottavi di cella.
 - "▸ dettagli" apre i quattro contatori in cifre e gli ultimi 5 tool chiamati.
 
 **Agenti conclusi**: una riga compatta con ✓, oppure ✗ con l'esito (Interrotto, Errore API, Rifiutato); "▸" la riapre.

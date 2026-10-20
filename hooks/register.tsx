@@ -133,6 +133,7 @@ export const register: Register = on => {
     const els = $.ui.resolve(e)
     const { Box, Text, Button } = els
     // Svg c'è su desktop, VS Code e mobile; il terminale usa gli ottavi di cella
+    // Niente isInteractive: lo disegna in un iframe largo 300 px fissi; come immagine riempie la scheda (tooltip persi, i numeri sono in "dettagli")
     const Svg = 'Svg' in els ? els.Svg : undefined
     const session = await $.session.usage()
     const all = visible(await read($, agents), session.startedAt).sort((a, b) => b.startedAt - a.startedAt)
@@ -164,7 +165,7 @@ export const register: Register = on => {
           {tot <= 0 || !parts
             ? <Text dimColor size="caption">{empty}</Text>
             : Svg
-              ? <Box flexGrow={1}><Svg source={svgBar(parts, colors, titles)} alt={`${label}: ${titles.join(', ')}`} height={8} isInteractive /></Box>
+              ? <Box flexGrow={1}><Svg source={svgBar(parts, colors, titles)} alt={`${label}: ${titles.join(', ')}`} height={8} /></Box>
               : <Text>{eighthsBar(parts, w).map(r =>
                   <Text color={colors[r.fg]} backgroundColor={r.bg === undefined ? undefined : colors[r.bg]}>{r.text}</Text>)}</Text>}
         </Box>
