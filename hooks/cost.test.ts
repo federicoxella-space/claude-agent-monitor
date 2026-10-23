@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { costOf, costParts, eighthsBar, svgBar, describeTool, effortLabel, fmtDuration, shortModel, sumCost } from './cost'
+import { costOf, costParts, eighthsBar, describeTool, effortLabel, fmtDuration, shortModel, sumCost } from './cost'
 import { activityText, resolveLang, STRINGS } from './i18n'
 
 const r = (x: number | undefined) => (x === undefined ? x : Math.round(x * 1e6) / 1e6)
@@ -41,14 +41,10 @@ test('barra a ottavi: larghezza esatta, segmenti minimi visibili, giunture a due
   expect(eighthsBar([0, 0], 10)).toEqual([])
 })
 
-test('costo per categoria e barra svg', () => {
+test('costo per categoria', () => {
   const parts = costParts('claude-opus-5-5', u)!.map(r)
   expect(parts).toEqual([4, 20, 0.2, 5])
   expect(costParts('ignoto', u)).toBe(undefined)
-  const svg = svgBar([1, 3], ['#111', '#222'], ['a <b>', 'c'])
-  expect(svg.includes('width="250.00"')).toBe(true)
-  expect(svg.includes('width="750.00"')).toBe(true)
-  expect(svg.includes('a &lt;b&gt;')).toBe(true)
 })
 
 test('modelli Bedrock, alias mythos e modelli senza prezzo', () => {

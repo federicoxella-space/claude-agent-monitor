@@ -19,7 +19,7 @@ Mod di Claude Code che mostra in un pannello live gli agenti (subagenti) della s
 
 **Scheda di ogni agente attivo**
 
-- Descrizione del compito, tipo di agente e `modello - effort`, nel colore della famiglia (viola opus, verde acqua sonnet, corallo haiku, ambra fable).
+- Descrizione del compito, tipo di agente e un badge `modello · effort`, nel colore caldo della famiglia (ambra fable, fucsia opus, rosa sonnet, pesca haiku).
 - Attività: il primo tool chiesto nell'ultimo step (`Edit src/parser.ts`), "Sta ragionando…" mentre il modello elabora, "Scrive la risposta" quando lo step non chiama tool.
 - Durata dal primo avvio dell'agente: per un agente ripreso include anche le pause.
 - Due barre con gli stessi quattro segmenti (input, output, cache read, cache write):
@@ -27,6 +27,8 @@ Mod di Claude Code che mostra in un pannello live gli agenti (subagenti) della s
   - **costo**: dove vanno davvero i soldi (la cache read pesa molto nei token e poco nel costo).
 
   Sul desktop sono barre SVG continue; sul terminale usano blocchi a ottavi di cella.
+
+Sul desktop il pannello riprende lo stile della mod git-graph: disegni SVG con font monospace, palette calda con accento ambra, glow leggero, nodi esagonali ed etichette in maiuscolo.
 - "▸ dettagli" apre i quattro contatori in cifre e gli ultimi 5 tool chiamati.
 
 **Agenti conclusi**: una riga compatta con ✓, oppure ✗ con l'esito (Interrotto, Errore API, Rifiutato); "▸" la riapre.

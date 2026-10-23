@@ -1,6 +1,6 @@
 {
   "name": "agent-monitor",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Live pane for the session agents: model, effort, activity, duration, tokens and estimated cost",
   "types": "./types/index.d.ts",
   "author": {

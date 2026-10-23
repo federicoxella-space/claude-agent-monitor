@@ -19,7 +19,7 @@ A Claude Code mod that shows the session's agents (subagents) in a live pane: mo
 
 **Card for each running agent**
 
-- Task description, agent type and `model - effort`, in the model family's colour (purple opus, teal sonnet, coral haiku, amber fable).
+- Task description, agent type and a `model · effort` badge, in the model family's warm colour (amber fable, fuchsia opus, rose sonnet, peach haiku).
 - Activity: the first tool requested in the latest step (`Edit src/parser.ts`), "Thinking…" while the model works, "Writing the answer" when the step calls no tools.
 - Duration since the agent first started: for a resumed agent it includes the pauses.
 - Two bars with the same four segments (input, output, cache read, cache write):
@@ -27,6 +27,8 @@ A Claude Code mod that shows the session's agents (subagents) in a live pane: mo
   - **cost**: where the money actually goes (cache reads weigh a lot in tokens and little in cost).
 
   On desktop they are continuous SVG bars; in the terminal they use eighth-of-a-cell blocks.
+
+On desktop the pane follows the look of the git-graph mod: SVG drawings with a monospace font, warm palette with amber accent, soft glow, hexagonal nodes and uppercase labels.
 - "▸ details" shows the four counters as numbers and the last 5 tools called.
 
 **Finished agents**: one compact row with ✓, or ✗ with the outcome (Interrupted, API error, Refused); "▸" expands it again.

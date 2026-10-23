@@ -138,23 +138,3 @@ export const eighthsBar = (parts: readonly number[], width: number): BarRun[] =>
   }
   return runs
 }
-
-const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-
-/** Barra SVG continua (desktop): segmenti proporzionali con tooltip, estremi arrotondati.
- * Larghezza del markup volutamente enorme: senza prop `width` lo Svg prende quella del markup fino allo slot,
- * quindi riempie la scheda; con "100%" il pannello ricadeva sui 300 px predefiniti degli SVG. */
-export const svgBar = (parts: readonly number[], colors: readonly string[], titles: readonly string[]) => {
-  const tot = parts.reduce((a, b) => a + b, 0)
-  const W = 1000, H = 8
-  let x = 0
-  const rects = tot <= 0 ? '' : parts.map((p, i) => {
-    const w = (p / tot) * W
-    const r = w > 0 ? `<rect x="${x.toFixed(2)}" width="${w.toFixed(2)}" height="${H}" fill="${colors[i]}"><title>${esc(titles[i] ?? '')}</title></rect>` : ''
-    x += w
-    return r
-  }).join('')
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="4000" height="${H}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">` +
-    `<defs><clipPath id="r"><rect width="${W}" height="${H}" rx="${H / 2}" ry="${H / 2}"/></clipPath></defs>` +
-    `<g clip-path="url(#r)"><rect width="${W}" height="${H}" fill="#88878033"/>${rects}</g></svg>`
-}
