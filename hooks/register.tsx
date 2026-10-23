@@ -161,7 +161,7 @@ export const register: Register = (on, options) => {
         </Box>
       )
       const metrics = [
-        { label: t.metricLive, value: String(live.length).padStart(2, '0'), extra: `/ ${all.length}`, color: live.length ? '#F59E0B' : undefined },
+        { label: t.metricLive, value: String(live.length), extra: `/ ${all.length}`, color: live.length ? '#F59E0B' : undefined },
         { label: t.metricTokens, value: fmtTokens(tokens) },
         { label: t.metricAgentsCost, value: costText(agentsCost) },
         { label: t.metricSession, value: fmtCost(session.cost?.usd) },
