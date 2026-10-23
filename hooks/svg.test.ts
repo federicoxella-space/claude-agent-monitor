@@ -1,7 +1,7 @@
 import { expect, test } from 'claude-code/testing'
 
 import type { AgentRow } from '../types'
-import { cardSvg, headerSvg, rowSvg, toneOf } from './svg'
+import { cardSvg, headerSvg, PULSE_MS, pulseTiming, rowSvg, toneOf } from './svg'
 
 const agent: AgentRow = {
   id: 'a1', description: 'Analizza <ciclo> vita', type: 'general-purpose', model: 'claude-opus-5-5', effort: 'high',
@@ -29,6 +29,14 @@ test('card: testo con escape, barre proporzionali, dettagli che allungano il dis
   const open = cardSvg(600, agent, 12_000, true, true, text)
   expect(open.height > closed.height).toBe(true)
   expect(open.source.includes('Read a.ts')).toBe(true)
+})
+
+test('pulse keeps its phase across redraws', () => {
+  expect(pulseTiming(0)).toBe('dur="2.4s" begin="-0.000s" repeatCount="indefinite"')
+  expect(pulseTiming(3_000)).toBe('dur="2.4s" begin="-0.600s" repeatCount="indefinite"')
+  expect(pulseTiming(3_000 + PULSE_MS)).toBe(pulseTiming(3_000))
+  expect(cardSvg(600, agent, 3_000, true, false, text).source.includes('begin="-0.600s"')).toBe(true)
+  expect(cardSvg(600, { ...agent, status: 'running' }, 3_000, true, false, text).source.includes('<animate')).toBe(false)
 })
 
 test('intestazione e riga compatta', () => {

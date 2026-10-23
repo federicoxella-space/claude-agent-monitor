@@ -119,6 +119,13 @@ export type CardText = {
   parts: readonly string[]
 }
 
+/** Length of one pulse of a thinking agent's node. */
+export const PULSE_MS = 2400
+
+/** Timing of the pulse at `now`: same duration on every redraw, begin moved back by the phase already elapsed. */
+export const pulseTiming = (now: number) =>
+  `dur="${PULSE_MS / 1000}s" begin="-${((now % PULSE_MS) / 1000).toFixed(3)}s" repeatCount="indefinite"`
+
 /** Card di un agente attivo, o concluso e aperto: nodo, descrizione, badge del modello, attività, barre, dettagli. */
 export function cardSvg(W: number, a: AgentRow, now: number, isLive: boolean, isOpen: boolean, t: CardText): { source: string; height: number } {
   const tone = toneOf(a.model)
@@ -135,10 +142,11 @@ export function cardSvg(W: number, a: AgentRow, now: number, isLive: boolean, is
     `<use href="#hx" x="20" y="20" fill="${isLive ? tone.stroke : MUTED}" fill-opacity="0.18" stroke="${isLive ? tone.stroke : MUTED}" stroke-width="1.6"/>` +
     (isLive ? `<circle cx="20" cy="20" r="2.5" fill="${tone.light}" filter="url(#g)"/>` : '') +
     (thinking
-      // Onda che parte dal bordo dell'esagono e si allarga svanendo, poi riparte da capo
-      ? `<circle cx="20" cy="20" r="7" fill="none" stroke="${tone.stroke}" stroke-width="1">` +
-        `<animate attributeName="r" values="7;15" dur="1s" repeatCount="indefinite"/>` +
-        `<animate attributeName="opacity" values="0.8;0" dur="1s" repeatCount="indefinite"/></circle>`
+      // Ripple just outside the hexagon that widens while fading, then starts over. Every redraw is a new SVG
+      // whose animation would restart from zero: the negative begin keeps its phase on the clock
+      ? `<circle cx="20" cy="20" r="9" fill="none" stroke="${tone.stroke}" stroke-width="1">` +
+        `<animate attributeName="r" values="9;16" ${pulseTiming(now)}/>` +
+        `<animate attributeName="opacity" values="0.7;0" ${pulseTiming(now)}/></circle>`
       : '') +
     `<rect x="${n(bx)}" y="11" width="${n(bw)}" height="18" rx="2" fill="${tone.stroke}" fill-opacity="0.12" stroke="${tone.stroke}"${isLive ? ' filter="url(#g)"' : ''}/>` +
     `<text x="${n(bx + bw / 2)}" y="24" fill="${tone.light}" class="b">${esc(badge)}</text>`
