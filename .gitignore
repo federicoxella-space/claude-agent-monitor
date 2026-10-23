@@ -1,3 +1,7 @@
 .claude-plugin/types/
 *.log
 .DS_Store
+factory/*
+!factory/config.md
+!factory/playbook.md
+!factory/backlog.md
