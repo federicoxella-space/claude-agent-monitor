@@ -203,9 +203,11 @@ export const register: Register = (on, options) => {
               </Box>
             )
           })}
-          <Box marginTop={1}>
-            <Text dimColor size="caption">{t.note}{agentsCost.unpriced ? t.unpriced(agentsCost.unpriced) : ''}</Text>
-          </Box>
+          {agentsCost.unpriced > 0 && (
+            <Box marginTop={1}>
+              <Text dimColor size="caption">{t.unpriced(agentsCost.unpriced)}</Text>
+            </Box>
+          )}
         </Box>
       )
     }
@@ -320,9 +322,11 @@ export const register: Register = (on, options) => {
           <Box marginTop={1}><Text dimColor>{everyone || all.length === 0 ? t.empty : t.noneLive}</Text></Box>
         )}
         {rows.map(card)}
-        <Box marginTop={1}>
-          <Text dimColor size="caption">{t.note}{agentsCost.unpriced ? t.unpriced(agentsCost.unpriced) : ''}</Text>
-        </Box>
+        {agentsCost.unpriced > 0 && (
+          <Box marginTop={1}>
+            <Text dimColor size="caption">{t.unpriced(agentsCost.unpriced)}</Text>
+          </Box>
+        )}
       </Box>
     )
   })
