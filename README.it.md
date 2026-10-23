@@ -31,12 +31,9 @@ Mod di Claude Code che mostra in un pannello live gli agenti (subagenti) della s
 Sul desktop il pannello riprende lo stile della mod git-graph: disegni SVG con font monospace, palette calda con accento ambra, glow leggero, nodi esagonali ed etichette in maiuscolo.
 - "▸ dettagli" apre i quattro contatori in cifre e gli ultimi 5 tool chiamati.
 
-**Agenti conclusi**: una riga compatta con ✓, oppure ✗ con l'esito (Interrotto, Errore API, Rifiutato); "▸" la riapre.
+**Agenti conclusi** (solo con l'opzione `agents` a `all`): una riga compatta con ✓, oppure ✗ con l'esito (Interrotto, Errore API, Rifiutato); "▸" la riapre.
 
-**Pulsanti**
-
-- **Attivi**: solo gli agenti in esecuzione (quelli conclusi spariscono appena finiscono). **Tutti**: l'intera sessione, agenti conclusi compresi.
-- **🗑 (pulisci conclusi)**: toglie tutti gli agenti terminati, compresi quelli falliti o di prima di un `/clear`.
+**🗑 pulisci conclusi** (solo con `agents` a `all`): toglie tutti gli agenti terminati, compresi quelli falliti o di prima di un `/clear`.
 
 **Status line**: `⚙ 3 agenti · $0.84` finché c'è almeno un agente attivo; il costo somma tutti gli agenti della sessione, conclusi compresi.
 
@@ -46,9 +43,16 @@ Sono elencati solo gli agenti avviati dal tool Agent dopo l'inizio della session
 
 `/agent-monitor` apre il pannello. Il pannello si apre anche da solo a ogni nuovo agente, quindi si riapre anche se lo avevi chiuso.
 
-## Lingua
+## Opzioni
 
-Il pannello è in italiano e in inglese. L'opzione `language` della mod (menu di configurazione dei plugin) vale:
+Dal menu di configurazione dei plugin.
+
+**`agents`**: quali agenti elenca il pannello.
+
+- `active` (predefinito): solo quelli in esecuzione; i conclusi spariscono appena finiscono;
+- `all`: l'intera sessione, agenti conclusi compresi, con il pulsante 🗑 per toglierli.
+
+**`language`**: il pannello è in italiano e in inglese; l'opzione vale:
 
 - `auto` (predefinito): segue l'impostazione `language` di Claude Code in `settings.json` (es. `"language": "italian"`), poi le variabili `LC_ALL` / `LANG`; se nessuna indica una lingua supportata, usa l'inglese;
 - `it` o `en`: forza la lingua.

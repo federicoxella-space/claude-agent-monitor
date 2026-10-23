@@ -31,12 +31,9 @@ A Claude Code mod that shows the session's agents (subagents) in a live pane: mo
 On desktop the pane follows the look of the git-graph mod: SVG drawings with a monospace font, warm palette with amber accent, soft glow, hexagonal nodes and uppercase labels.
 - "▸ details" shows the four counters as numbers and the last 5 tools called.
 
-**Finished agents**: one compact row with ✓, or ✗ with the outcome (Interrupted, API error, Refused); "▸" expands it again.
+**Finished agents** (only with the `agents` option set to `all`): one compact row with ✓, or ✗ with the outcome (Interrupted, API error, Refused); "▸" expands it again.
 
-**Buttons**
-
-- **Active**: running agents only (finished ones disappear as they end). **All**: the whole session, finished agents included.
-- **🗑 (clear finished)**: removes every finished agent, including failed ones and those from before a `/clear`.
+**🗑 clear finished** (only with `agents` set to `all`): removes every finished agent, including failed ones and those from before a `/clear`.
 
 **Status line**: `⚙ 3 agents · $0.84` while at least one agent is running; the cost adds up every agent in the session, finished ones included.
 
@@ -46,9 +43,16 @@ Only agents started by the Agent tool after the session began (or after the late
 
 `/agent-monitor` opens the pane. The pane also opens by itself whenever a new agent starts, so it comes back even if you closed it.
 
-## Language
+## Options
 
-The pane is available in English and Italian. The mod's `language` option (plugin configuration menu) can be:
+From the plugin configuration menu.
+
+**`agents`**: which agents the pane lists.
+
+- `active` (default): running agents only; finished ones disappear as they end;
+- `all`: the whole session, finished agents included, with the 🗑 button to clear them.
+
+**`language`**: the pane is available in English and Italian; the option can be:
 
 - `auto` (default): follows Claude Code's `language` setting in `settings.json` (e.g. `"language": "italian"`), then the `LC_ALL` / `LANG` variables; if none of them names a supported language, English is used;
 - `it` or `en`: forces the language.

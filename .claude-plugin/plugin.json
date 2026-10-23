@@ -17,6 +17,16 @@
         "it",
         "en"
       ]
+    },
+    "agents": {
+      "type": "string",
+      "title": "Agents shown",
+      "description": "active: running agents only; all: finished agents too, with a button to clear them",
+      "default": "active",
+      "options": [
+        "active",
+        "all"
+      ]
     }
   }
 }

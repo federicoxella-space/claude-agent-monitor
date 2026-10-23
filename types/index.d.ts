@@ -21,7 +21,6 @@ declare module 'claude-code' {
     'agent-monitor': {
       agents: Record<string, AgentRow>
       expanded: string | null
-      showAll: boolean
     }
   }
 }

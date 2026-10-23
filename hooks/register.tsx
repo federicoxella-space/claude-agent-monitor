@@ -14,7 +14,6 @@ const PANE = 'agent-monitor'
 let t = STRINGS.en
 const agents = atom({ plugin: 'agent-monitor', key: 'agents' } as const, {})
 const expanded = atom({ plugin: 'agent-monitor', key: 'expanded' } as const, null)
-const showAll = atom({ plugin: 'agent-monitor', key: 'showAll' } as const, false)
 
 type $ = EngineInterface
 
@@ -132,7 +131,8 @@ export const register: Register = (on, options) => {
     const session = await $.session.usage()
     const all = visible(await read($, agents), session.startedAt).sort((a, b) => b.startedAt - a.startedAt)
     const open = await read($, expanded)
-    const everyone = await read($, showAll)
+    // Opzione `agents` della mod: "all" mostra anche i conclusi; cambiarla ricarica il modulo
+    const everyone = options.agents === 'all'
     const now = await $.clock.now()
     const cols = e.props.bodyColumns ?? 60
     const barWidth = Math.max(10, cols - 6)
@@ -155,11 +155,6 @@ export const register: Register = (on, options) => {
       const Svg = els.Svg
       const W = Math.max(320, Math.floor(cols * CELL_W))
       const cardW = W - BUTTON_W
-      const tab = (label: string, isOn: boolean, onPress: () => unknown) => (
-        <Button key={`tab-${label}`} plain onPress={onPress}>
-          <Text dimColor={!isOn} bold={isOn}>{isOn ? '◆' : '◇'} {label.toUpperCase()}</Text>
-        </Button>
-      )
       const side = (key: string, label: string, onPress: () => unknown) => (
         <Box flexDirection="column" justifyContent="center" alignItems="center" flexGrow={1}>
           <Button key={key} plain onPress={onPress}><Text dimColor>{label}</Text></Button>
@@ -176,12 +171,12 @@ export const register: Register = (on, options) => {
         <Box flexDirection="column">
           <Svg source={headerSvg(W, t.heading, { text: live.length ? '● LIVE' : 'IDLE', isLive: live.length > 0 }, metrics)}
             alt={`${t.heading}: ${metrics.map(m => `${m.label} ${m.value}`).join(', ')}`} width={W} height={HEADER_H} />
-          <Box flexDirection="row" gap={2}>
-            {tab(t.filterLive, !everyone, () => update($, showAll, () => false))}
-            {tab(t.filterAll, everyone, () => update($, showAll, () => true))}
-            <Box flexGrow={1} />
-            <Button key="clear-done" plain onPress={clearDone}><Text dimColor>🗑</Text></Button>
-          </Box>
+          {everyone && (
+            <Box flexDirection="row">
+              <Box flexGrow={1} />
+              <Button key="clear-done" plain onPress={clearDone}><Text dimColor>🗑 {t.clearDone.toUpperCase()}</Text></Button>
+            </Box>
+          )}
           {rows.length === 0 && (
             <Box marginTop={1}>
               <Svg source={messageSvg(W, everyone || all.length === 0 ? t.empty : t.noneLive)} alt={everyone || all.length === 0 ? t.empty : t.noneLive} width={W} height={40} />
@@ -313,9 +308,7 @@ export const register: Register = (on, options) => {
         <Box flexDirection="row" gap={1}>
           <Text bold size="heading">{t.heading}</Text>
           <Box flexGrow={1} />
-          <Button key="filter-live" label={t.filterLive} variant={everyone ? 'secondary' : 'primary'} onPress={() => update($, showAll, () => false)} />
-          <Button key="filter-all" label={t.filterAll} variant={everyone ? 'primary' : 'secondary'} onPress={() => update($, showAll, () => true)} />
-          <Button key="clear-done" label="🗑" onPress={clearDone} />
+          {everyone && <Button key="clear-done" label={`🗑 ${t.clearDone}`} onPress={clearDone} />}
         </Box>
         <Box flexDirection="row" gap={1} marginTop={1}>
           {metric(t.metricLive, String(live.length), `/ ${all.length}`)}
