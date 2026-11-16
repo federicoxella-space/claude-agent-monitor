@@ -47,9 +47,10 @@ const upsert = async ($: $, id: string, fn: (a: AgentRow) => AgentRow) => {
 // Ricalcola la status line dallo stato corrente; il tick la richiama ogni secondo, così due chiamate concorrenti
 // arrivate fuori ordine non lasciano mai un valore vecchio per più di un secondo
 const refreshStatus = async ($: $) => {
-  const rows = visible(await read($, agents), (await $.session.usage()).startedAt)
+  const since = (await $.session.usage()).startedAt
+  const rows = visible(await read($, agents), since)
   const live = rows.filter(isLive).length
-  const running = visibleTasks(await read($, tasks), (await $.session.usage()).startedAt, false).length
+  const running = visibleTasks(await read($, tasks), since, false).length
   $.ui.status(statusLine(live ? t.status(live, costText(sumCost(rows))) : undefined, running, t.statusBg))
   return live + running
 }
@@ -60,8 +61,8 @@ export const register: Register = (on, options) => {
     const lang = resolveLang(options.language, settings.language, await $.env.get('LC_ALL'), await $.env.get('LANG'))
     t = STRINGS[lang]
     $.ui.log(`lingua ${lang} (opzione ${String(options.language)}, language ${String(settings.language)})`, { to: 'debug' })
-    // Ogni secondo: scadenza dei monitor, status line sempre allineata; ridisegno del pannello (timer) solo mentre
-    // qualche agente o task in background lavora
+    // Every second: expire monitors, keep the status line in sync; redraw the pane (timer) only while an agent
+    // or a background task is live
     $.clock.every(1000, () => {
       void (async () => {
         const now = await $.clock.now()
