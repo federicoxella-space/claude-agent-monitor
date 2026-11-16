@@ -1,6 +1,6 @@
 // Disegni SVG del pannello su desktop, nello stile della mod git-graph: font monospace, palette calda,
 // glow, nodi esagonali, etichette maiuscole. Il terminale non li usa: disegna con i componenti nativi.
-import type { AgentRow } from '../types'
+import type { AgentRow, BgTask } from '../types'
 import { costOf, costParts, effortLabel, family, fmtCost, fmtDuration, fmtTokens, shortModel, totalTokens } from './cost'
 
 /** Pixel per cella del font del desktop: il pannello è misurato in celle. */
@@ -117,6 +117,7 @@ export type CardText = {
   footnote: string
   noTools: string
   parts: readonly string[]
+  bgBadge: string
 }
 
 /** Length of one pulse of a thinking agent's node. */
@@ -155,7 +156,13 @@ export function cardSvg(W: number, a: AgentRow, now: number, isLive: boolean, is
   out += `<text x="36" y="24" fill="${isLive ? BRIGHT : SOFT}" font-size="13">${esc(desc)}</text>`
   const typeX = 36 + desc.length * CHAR + 10
   const typeRoom = Math.floor((bx - 12 - typeX) / SMALL_CHAR)
-  if (typeRoom >= 4) out += `<text x="${n(typeX)}" y="24" class="d">${esc(cut(a.type, typeRoom))}</text>`
+  if (typeRoom >= 4) {
+    const type = cut(a.type, typeRoom)
+    out += `<text x="${n(typeX)}" y="24" class="d">${esc(type)}</text>`
+    // Same rule as the type: the tag is dropped when it does not fit before the model badge
+    const tagX = typeX + type.length * SMALL_CHAR + 8
+    if (a.background && tagX + t.bgBadge.length * SMALL_CHAR <= bx - 12) out += `<text x="${n(tagX)}" y="24" class="d" fill-opacity="0.6">${esc(t.bgBadge)}</text>`
+  }
 
   // Riga 2: attività e durata
   const elapsed = fmtDuration((a.endedAt ?? now) - a.startedAt)
@@ -221,7 +228,7 @@ export function cardSvg(W: number, a: AgentRow, now: number, isLive: boolean, is
 export const ROW_H = 36
 
 /** Riga compatta di un agente concluso: esito, descrizione, tipo; a destra modello, durata e costo. */
-export function rowSvg(W: number, a: AgentRow, now: number): string {
+export function rowSvg(W: number, a: AgentRow, now: number, bgBadge: string): string {
   const failed = a.status === 'failed'
   const right = W - 16
   const cost = fmtCost(costOf(a.model, a.usage))
@@ -234,6 +241,9 @@ export function rowSvg(W: number, a: AgentRow, now: number): string {
   const desc = cut(a.description, room)
   const typeX = 36 + desc.length * MID_CHAR + 10
   const typeRoom = Math.floor((metaX - meta.length * SMALL_CHAR - 12 - typeX) / SMALL_CHAR)
+  const type = typeRoom >= 4 ? cut(a.type, typeRoom) : ''
+  const tagX = typeX + type.length * SMALL_CHAR + 8
+  const showTag = a.background === true && type !== '' && tagX + bgBadge.length * SMALL_CHAR <= metaX - meta.length * SMALL_CHAR - 12
 
   return shell(
     W,
@@ -241,7 +251,8 @@ export function rowSvg(W: number, a: AgentRow, now: number): string {
     `<rect x="0.5" y="0.5" width="${W - 1}" height="${ROW_H - 1}" rx="8" fill="none" stroke="${LINE}"/>` +
       `<text x="16" y="23" font-size="12" fill="${failed ? RED : SOFT}">${failed ? '✗' : '✓'}</text>` +
       `<text x="36" y="23" fill="${SOFT}" font-size="12">${esc(desc)}</text>` +
-      (typeRoom >= 4 ? `<text x="${n(typeX)}" y="23" class="d">${esc(cut(a.type, typeRoom))}</text>` : '') +
+      (type ? `<text x="${n(typeX)}" y="23" class="d">${esc(type)}</text>` : '') +
+      (showTag ? `<text x="${n(tagX)}" y="23" class="d" fill-opacity="0.6">${esc(bgBadge)}</text>` : '') +
       `<text x="${n(metaX)}" y="23" class="d" text-anchor="end">${esc(meta)}</text>` +
       `<text x="${right}" y="23" fill="${TEXT}" font-size="12" text-anchor="end">${esc(cost)}</text>`,
   )
@@ -250,3 +261,33 @@ export function rowSvg(W: number, a: AgentRow, now: number): string {
 /** Testo per chi non vede il disegno di un agente. */
 export const altOf = (a: AgentRow, activity: string) =>
   `${a.description} (${a.type}), ${shortModel(a.model)} ${effortLabel(a.effort)}: ${activity}, ${fmtTokens(totalTokens(a.usage))} token, ${fmtCost(costOf(a.model, a.usage))}`
+
+export const BG_ROW_H = 28
+
+const bgGlyph = (k: BgTask) => (k.status === 'running' ? '●' : k.status === 'done' ? '✓' : '✗')
+const bgIcon = (k: BgTask) => (k.kind === 'shell' ? '$' : '◎')
+const bgElapsed = (k: BgTask, now: number) => fmtDuration((k.endedAt ?? now) - k.startedAt)
+
+/** Background section: uppercase heading, then one compact row per shell or monitor. */
+export function backgroundSvg(W: number, tasks: BgTask[], now: number, heading: string): { source: string; height: number } {
+  const right = W - 16
+  let out = `<text x="16" y="18" class="l">${esc(cut(heading.toUpperCase(), Math.floor((W - 32) / SMALL_CHAR)))}</text>`
+  tasks.forEach((k, i) => {
+    const y = BG_ROW_H + i * BG_ROW_H + 18
+    const glyphColor = k.status === 'running' ? AMBER : k.status === 'failed' ? RED : SOFT
+    const dur = bgElapsed(k, now)
+    const room = Math.floor((right - dur.length * MID_CHAR - 12 - 52) / MID_CHAR)
+    out +=
+      `<text x="16" y="${y}" font-size="12" fill="${glyphColor}"${k.status === 'running' ? ' filter="url(#g)"' : ''}>${bgGlyph(k)}</text>` +
+      `<text x="34" y="${y}" font-size="12" fill="${MUTED}">${bgIcon(k)}</text>` +
+      `<text x="52" y="${y}" class="m" fill="${k.status === 'running' ? BRIGHT : SOFT}">${esc(cut(k.text, room))}</text>` +
+      `<text x="${right}" y="${y}" fill="${SOFT}" font-size="11" text-anchor="end">${dur}</text>`
+  })
+  const height = BG_ROW_H + tasks.length * BG_ROW_H
+
+  return { source: shell(W, height, out), height }
+}
+
+/** Text for whoever cannot see the background section drawing. */
+export const bgAltOf = (heading: string, tasks: BgTask[], now: number): string =>
+  `${heading}: ${tasks.map(k => `${bgGlyph(k)} ${bgIcon(k)} ${k.text} ${bgElapsed(k, now)}`).join(', ')}`
