@@ -14,6 +14,20 @@ export type AgentRow = {
   recent: { at: number; text: string }[]
   steps: number
   usage: Usage
+  /** started with run_in_background */
+  background?: boolean
+}
+
+export type BgTask = {
+  id: string
+  toolUseId: string
+  kind: 'shell' | 'monitor'
+  text: string
+  agentId?: string
+  startedAt: number
+  endedAt?: number
+  timeoutMs?: number
+  status: 'running' | 'done' | 'failed'
 }
 
 declare module 'claude-code' {
@@ -21,6 +35,7 @@ declare module 'claude-code' {
     'agent-monitor': {
       agents: Record<string, AgentRow>
       expanded: string | null
+      tasks: Record<string, BgTask>
     }
   }
 }
