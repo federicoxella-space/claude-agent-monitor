@@ -19,7 +19,7 @@ A Claude Code mod that shows the session's agents (subagents) in a live pane: mo
 
 **Card for each running agent**
 
-- Task description, agent type and a `model · effort` badge, in the model family's warm colour (amber fable, fuchsia opus, rose sonnet, peach haiku).
+- Task description, agent type (with a dim `bg` tag when it was started in the background) and a `model · effort` badge, in the model family's warm colour (amber fable, fuchsia opus, rose sonnet, peach haiku).
 - Activity: the first tool requested in the latest step (`Edit src/parser.ts`), "Thinking…" while the model works, "Writing the answer" when the step calls no tools.
 - Duration since the agent first started: for a resumed agent it includes the pauses.
 - Two bars with the same four segments (input, output, cache read, cache write):
@@ -33,9 +33,11 @@ On desktop the pane follows the look of the git-graph mod: SVG drawings with a m
 
 **Finished agents** (only with the `agents` option set to `all`): one compact row with ✓, or ✗ with the outcome (Interrupted, API error, Refused); "▸" expands it again.
 
-**🗑 clear finished** (only with `agents` set to `all`): removes every finished agent, including failed ones and those from before a `/clear`.
+**🗑 clear finished** (only with `agents` set to `all`): removes every finished agent and background task, including failed ones and those from before a `/clear`.
 
-**Status line**: `⚙ 3 agents · $0.84` while at least one agent is running; the cost adds up every agent in the session, finished ones included.
+**Background section** (below the agents, only when it has rows): background shell commands (`$`) and Monitor watches (`◎`), one compact row each with state (● running, ✓ completed, ✗ failed or stopped), the command or watch description and how long it has been running. Tasks started inside subagents are listed too. A task that ends follows the `agents` option like agents do: with `active` its row disappears, with `all` it stays with ✓ or ✗, and 🗑 clears it together with the finished agents. A task whose end the engine never reports stays running until the next `/clear` or session start. These tasks do not count in the Active box and do not open the pane.
+
+**Status line**: `⚙ 3 agents · $0.84` while at least one agent is running; the cost adds up every agent in the session, finished ones included. While background tasks run it adds `· 2 bg` (`⚙ 3 agents · $0.84 · 2 bg`), or shows only `⚙ 2 bg` when no agent is running.
 
 Only agents started by the Agent tool after the session began (or after the latest `/clear`) are listed; the engine's internal forks stay hidden.
 

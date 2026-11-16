@@ -1,19 +1,26 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
-import type { AgentRow } from '../types'
+import type { AgentRow, BgTask } from '../types'
 import {
   costOf, costParts, describeTool, effortLabel, eighthsBar, fmtCost, fmtDuration, fmtTokens,
   shortModel, sumCost, totalTokens, zeroUsage,
 } from './cost'
+import {
+  dropEnded, endTask, expireMonitors, isRunning, parseTaskNotifications, statusLine, stopTask, stoppedTaskId,
+  taskFromToolCall, visibleTasks,
+} from './background'
 import { activityText, resolveLang, STRINGS } from './i18n'
-import { altOf, BUTTON_W, CELL_W, cardSvg, HEADER_H, headerSvg, messageSvg, ROW_H, rowSvg, toneOf } from './svg'
+import {
+  altOf, backgroundSvg, BUTTON_W, bgAltOf, CELL_W, cardSvg, HEADER_H, headerSvg, messageSvg, ROW_H, rowSvg, toneOf,
+} from './svg'
 
 const PANE = 'agent-monitor'
 // Lingua scelta a session.start (che rigira a ogni reload); inglese finché non è risolta
 let t = STRINGS.en
 const agents = atom({ plugin: 'agent-monitor', key: 'agents' } as const, {})
 const expanded = atom({ plugin: 'agent-monitor', key: 'expanded' } as const, null)
+const tasks = atom({ plugin: 'agent-monitor', key: 'tasks' } as const, {})
 
 type $ = EngineInterface
 
@@ -42,8 +49,9 @@ const upsert = async ($: $, id: string, fn: (a: AgentRow) => AgentRow) => {
 const refreshStatus = async ($: $) => {
   const rows = visible(await read($, agents), (await $.session.usage()).startedAt)
   const live = rows.filter(isLive).length
-  $.ui.status(live ? t.status(live, costText(sumCost(rows))) : undefined)
-  return live
+  const running = visibleTasks(await read($, tasks), (await $.session.usage()).startedAt, false).length
+  $.ui.status(statusLine(live ? t.status(live, costText(sumCost(rows))) : undefined, running, t.statusBg))
+  return live + running
 }
 
 export const register: Register = (on, options) => {
@@ -52,11 +60,14 @@ export const register: Register = (on, options) => {
     const lang = resolveLang(options.language, settings.language, await $.env.get('LC_ALL'), await $.env.get('LANG'))
     t = STRINGS[lang]
     $.ui.log(`lingua ${lang} (opzione ${String(options.language)}, language ${String(settings.language)})`, { to: 'debug' })
-    // Ogni secondo: status line sempre allineata; ridisegno del pannello (timer) solo mentre qualche agente lavora
+    // Ogni secondo: scadenza dei monitor, status line sempre allineata; ridisegno del pannello (timer) solo mentre
+    // qualche agente o task in background lavora
     $.clock.every(1000, () => {
-      void refreshStatus($).then(live => {
-        if (live) $.ui.invalidate('ui.render')
-      })
+      void (async () => {
+        const now = await $.clock.now()
+        await update($, tasks, cur => expireMonitors(cur, now))
+        if (await refreshStatus($)) $.ui.invalidate('ui.render')
+      })()
     })
     // /agents è già un comando della CLI da terminale
     await $.command.register({ name: 'agent-monitor', description: t.commandDescription })
@@ -74,10 +85,53 @@ export const register: Register = (on, options) => {
       // Anche per un agente ripreso (resume, teammate risvegliato): torna attivo; la durata resta contata dal primo avvio (startedAt)
       await upsert($, r.agentId, a => ({
         ...a, description: e.description, type: e.subagentType, model: a.model ?? r.model,
-        status: 'running', endedAt: undefined, activity: '@starting',
+        status: 'running', endedAt: undefined, activity: '@starting', background: e.background === true,
       }))
       void $.ui.open({ id: PANE, title: t.title })
     }
+    return r
+  })
+
+  // A background shell or monitor starts (or a TaskStop ends one) when its tool call resolves
+  on('tool.call', async ($, e, next) => {
+    const r = await next(e)
+    const now = await $.clock.now()
+    const input: Record<string, unknown> = e
+    const started = taskFromToolCall({ tool: e.tool, toolUseId: e.tool_use_id, agentId: e.agentId, input }, r, now)
+    const stopped = stoppedTaskId(e.tool, r)
+    if (started) {
+      await update($, tasks, cur => ({ ...cur, [started.id]: started }))
+      await refreshStatus($)
+    } else if (stopped !== undefined) {
+      await update($, tasks, cur => stopTask(cur, stopped, now))
+      await refreshStatus($)
+    }
+    return r
+  })
+
+  // The engine's only end signal for a shell or monitor is its task-notification row
+  on('session.append', async ($, e, next) => {
+    const r = await next(e)
+    if (e.origin.kind !== 'task-notification') return r
+    const text = e.message.content
+      .map(b => (b.type === 'text' && typeof b.text === 'string' ? b.text : undefined))
+      .filter(x => x !== undefined).join('\n')
+    const notices = parseTaskNotifications(text)
+    if (notices.length === 0) return r
+    const now = await $.clock.now()
+    const unchanged: string[] = []
+    await update($, tasks, cur => {
+      unchanged.length = 0
+      let out = cur
+      for (const n of notices) {
+        const after = endTask(out, n, now)
+        if (after === out) unchanged.push(`${n.status ?? 'none'} ${n.taskId ?? n.toolUseId ?? '?'}`)
+        out = after
+      }
+      return out
+    })
+    for (const u of unchanged) $.ui.log(`task notification left unchanged: ${u}`, { to: 'debug' })
+    await refreshStatus($)
     return r
   })
 
@@ -142,9 +196,12 @@ export const register: Register = (on, options) => {
     const agentsCost = sumCost(all)
     const tokens = all.reduce((s, a) => s + totalTokens(a.usage), 0)
 
+    const bgRows = visibleTasks(await read($, tasks), session.startedAt, everyone)
+
     const clearDone = async () => {
       // toglie dallo stato tutte le righe concluse, anche quelle di prima di un /clear
       await update($, agents, cur => Object.fromEntries(Object.entries(cur).filter(([, a]) => isLive(a))))
+      await update($, tasks, dropEnded)
       await update($, expanded, id => (id !== null && all.some(a => a.id === id && !isLive(a)) ? null : id))
     }
     const toggle = (id: string) => update($, expanded, cur => (cur === id ? null : id))
@@ -187,14 +244,14 @@ export const register: Register = (on, options) => {
             if (!isLive(a) && open !== a.id) {
               return (
                 <Box key={a.id} flexDirection="row" alignItems="stretch" marginTop={1}>
-                  <Svg source={rowSvg(cardW, a, now)} alt={altOf(a, activity)} width={cardW} height={ROW_H} />
+                  <Svg source={rowSvg(cardW, a, now, t.bgBadge)} alt={altOf(a, activity)} width={cardW} height={ROW_H} />
                   {side(`open-${a.id}`, '▸', () => toggle(a.id))}
                 </Box>
               )
             }
             const card = cardSvg(cardW, a, now, isLive(a), open === a.id, {
               activity, barTokens: t.barTokens, barCost: t.barCost, noTokens: t.noTokens, noCost: t.noCost,
-              unknownPrice: t.unknownPrice, footnote: t.footnote(fmtTokens(totalTokens(a.usage)), a.steps), noTools: t.noTools, parts: PARTS,
+              unknownPrice: t.unknownPrice, footnote: t.footnote(fmtTokens(totalTokens(a.usage)), a.steps), noTools: t.noTools, parts: PARTS, bgBadge: t.bgBadge,
             })
             return (
               <Box key={a.id} flexDirection="row" alignItems="stretch" marginTop={1}>
@@ -208,6 +265,14 @@ export const register: Register = (on, options) => {
               <Text dimColor size="caption">{t.unpriced(agentsCost.unpriced)}</Text>
             </Box>
           )}
+          {bgRows.length > 0 && (() => {
+            const bg = backgroundSvg(W, bgRows, now, t.background)
+            return (
+              <Box marginTop={1}>
+                <Svg source={bg.source} alt={bgAltOf(t.background, bgRows, now)} width={W} height={bg.height} />
+              </Box>
+            )
+          })()}
         </Box>
       )
     }
@@ -258,6 +323,7 @@ export const register: Register = (on, options) => {
             <Text color={a.status === 'failed' ? 'error' : 'inactive'}>{a.status === 'failed' ? '✗' : '✓'}</Text>
             <Text dimColor>{a.description}</Text>
             <Text dimColor size="footnote">{a.type}</Text>
+            {a.background && <Text dimColor size="footnote">{t.bgBadge}</Text>}
             <Box flexGrow={1} />
             <Text dimColor size="footnote">{shortModel(a.model)} · {effortLabel(a.effort)} · {elapsed}</Text>
             <Text dimColor>{cost}</Text>
@@ -273,6 +339,7 @@ export const register: Register = (on, options) => {
             <Text color={isLive(a) ? tone.stroke : 'inactive'}>⬡</Text>
             <Text bold>{a.description}</Text>
             <Text dimColor size="footnote">{a.type}</Text>
+            {a.background && <Text dimColor size="footnote">{t.bgBadge}</Text>}
             <Box flexGrow={1} />
             <Text color={tone.light}>[{shortModel(a.model)} · {effortLabel(a.effort)}]</Text>
           </Box>
@@ -305,6 +372,18 @@ export const register: Register = (on, options) => {
       )
     }
 
+    const bgRow = (k: BgTask) => (
+      <Box key={k.id} flexDirection="row" gap={1} paddingX={1}>
+        <Text color={isRunning(k) ? 'warning' : k.status === 'failed' ? 'error' : 'inactive'}>
+          {isRunning(k) ? '●' : k.status === 'failed' ? '✗' : '✓'}
+        </Text>
+        <Text dimColor>{k.kind === 'shell' ? '$' : '◎'}</Text>
+        <Text wrap="truncate-end">{k.text}</Text>
+        <Box flexGrow={1} />
+        <Text dimColor tabular>{fmtDuration((k.endedAt ?? now) - k.startedAt)}</Text>
+      </Box>
+    )
+
     return (
       <Box flexDirection="column">
         <Box flexDirection="row" gap={1}>
@@ -325,6 +404,12 @@ export const register: Register = (on, options) => {
         {agentsCost.unpriced > 0 && (
           <Box marginTop={1}>
             <Text dimColor size="caption">{t.unpriced(agentsCost.unpriced)}</Text>
+          </Box>
+        )}
+        {bgRows.length > 0 && (
+          <Box flexDirection="column" marginTop={1}>
+            <Text bold>{t.background.toUpperCase()}</Text>
+            {bgRows.map(bgRow)}
           </Box>
         )}
       </Box>
