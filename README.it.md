@@ -19,7 +19,7 @@ Mod di Claude Code che mostra in un pannello live gli agenti (subagenti) della s
 
 **Scheda di ogni agente attivo**
 
-- Descrizione del compito, tipo di agente e un badge `modello · effort`, nel colore caldo della famiglia (ambra fable, fucsia opus, rosa sonnet, pesca haiku).
+- Descrizione del compito, tipo di agente (con una piccola etichetta `bg` se è stato avviato in background) e un badge `modello · effort`, nel colore caldo della famiglia (ambra fable, fucsia opus, rosa sonnet, pesca haiku).
 - Attività: il primo tool chiesto nell'ultimo step (`Edit src/parser.ts`), "Sta ragionando…" mentre il modello elabora, "Scrive la risposta" quando lo step non chiama tool.
 - Durata dal primo avvio dell'agente: per un agente ripreso include anche le pause.
 - Due barre con gli stessi quattro segmenti (input, output, cache read, cache write):
@@ -33,9 +33,11 @@ Sul desktop il pannello riprende lo stile della mod git-graph: disegni SVG con f
 
 **Agenti conclusi** (solo con l'opzione `agents` a `all`): una riga compatta con ✓, oppure ✗ con l'esito (Interrotto, Errore API, Rifiutato); "▸" la riapre.
 
-**🗑 pulisci conclusi** (solo con `agents` a `all`): toglie tutti gli agenti terminati, compresi quelli falliti o di prima di un `/clear`.
+**🗑 pulisci conclusi** (solo con `agents` a `all`): toglie tutti gli agenti e i task in background terminati, compresi quelli falliti o di prima di un `/clear`.
 
-**Status line**: `⚙ 3 agenti · $0.84` finché c'è almeno un agente attivo; il costo somma tutti gli agenti della sessione, conclusi compresi.
+**Sezione Background** (sotto gli agenti, solo se ha righe): comandi shell in background (`$`) e Monitor (`◎`), una riga compatta ciascuno con lo stato (● in corso, ✓ concluso, ✗ fallito o fermato), il comando o la descrizione del monitor e da quanto è in esecuzione. Sono elencati anche i task avviati dentro i subagenti. Quando un task termina segue l'opzione `agents` come gli agenti: con `active` la riga sparisce, con `all` resta con ✓ o ✗, e 🗑 la toglie insieme agli agenti conclusi. Un task di cui il motore non segnala mai la fine resta in corso fino al prossimo `/clear` o all'avvio di una nuova sessione. Questi task non contano nel riquadro Attivi e non aprono il pannello.
+
+**Status line**: `⚙ 3 agenti · $0.84` finché c'è almeno un agente attivo; il costo somma tutti gli agenti della sessione, conclusi compresi. Mentre girano task in background aggiunge `· 2 bg` (`⚙ 3 agenti · $0.84 · 2 bg`), oppure mostra solo `⚙ 2 bg` se nessun agente è attivo.
 
 Sono elencati solo gli agenti avviati dal tool Agent dopo l'inizio della sessione (o dopo l'ultimo `/clear`); i fork interni del motore restano nascosti.
 
